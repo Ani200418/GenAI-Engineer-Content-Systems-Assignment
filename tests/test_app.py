@@ -1,6 +1,7 @@
 """Smoke test of the Streamlit UI using Streamlit's headless AppTest (no browser, mock mode only)."""
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 APP = str(Path(__file__).resolve().parents[1] / "app.py")
@@ -36,3 +37,11 @@ def test_app_rejects_empty_topic(monkeypatch, tmp_path):
     at.text_input[0].set_value("   ")
     at.button[0].click().run()
     assert any("Topic must not be empty" in e.value for e in at.error)
+
+
+@pytest.mark.parametrize("value", ["", "not-a-number", "0", "11"])
+def test_app_reports_invalid_threshold_configuration(monkeypatch, tmp_path, value):
+    monkeypatch.setenv("LEARNING_THRESHOLD", value)
+    at = _app(monkeypatch, tmp_path).run()
+    assert not at.exception
+    assert any("Invalid configuration" in e.value for e in at.error)

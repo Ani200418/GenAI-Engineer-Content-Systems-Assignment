@@ -13,6 +13,9 @@ except ImportError:  # pragma: no cover
     pass
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_LEARNING_THRESHOLD = 2
+MIN_LEARNING_THRESHOLD = 1
+MAX_LEARNING_THRESHOLD = 10
 
 
 @dataclass(frozen=True)
@@ -29,14 +32,32 @@ class Settings:
         return self.db_dir / ("memory_mock.db" if mode == "mock" else "memory_real.db")
 
 
+def parse_learning_threshold(value: object, *, source: str = "LEARNING_THRESHOLD") -> int:
+    """Parse and validate the number of failing runs required for learning."""
+    if value is None:
+        return DEFAULT_LEARNING_THRESHOLD
+    if isinstance(value, bool):
+        raise ValueError(f"{source} must be a whole number from {MIN_LEARNING_THRESHOLD} to {MAX_LEARNING_THRESHOLD}.")
+    if isinstance(value, str) and not value.strip():
+        raise ValueError(f"{source} must not be empty; use a whole number from {MIN_LEARNING_THRESHOLD} to {MAX_LEARNING_THRESHOLD}.")
+    try:
+        threshold = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"{source} must be a whole number from {MIN_LEARNING_THRESHOLD} to {MAX_LEARNING_THRESHOLD}."
+        ) from exc
+    if threshold < MIN_LEARNING_THRESHOLD or threshold > MAX_LEARNING_THRESHOLD:
+        raise ValueError(
+            f"{source} must be between {MIN_LEARNING_THRESHOLD} and {MAX_LEARNING_THRESHOLD}."
+        )
+    return threshold
+
+
 def load_settings() -> Settings:
     db_dir = Path(os.getenv("LESSONGEN_DB_DIR", "data"))
     if not db_dir.is_absolute():
         db_dir = PROJECT_ROOT / db_dir
-    try:
-        threshold = max(1, int(os.getenv("LEARNING_THRESHOLD", "2")))
-    except ValueError:
-        threshold = 2
+    threshold = parse_learning_threshold(os.getenv("LEARNING_THRESHOLD"))
     return Settings(
         provider_mode=os.getenv("PROVIDER_MODE", "mock").strip().lower() or "mock",
         api_key=os.getenv("ANTHROPIC_API_KEY") or None,

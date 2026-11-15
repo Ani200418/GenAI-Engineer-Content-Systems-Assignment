@@ -9,10 +9,14 @@ from src.core.factory import build_pipeline
 from src.core.schemas import DEFAULT_LEARNER_LEVEL, DEFAULT_TOPIC, LessonRequest, Stage
 from src.providers import SCENARIOS
 from src.ui import render
-from src.utils.config import load_settings
+from src.utils.config import load_settings, parse_learning_threshold
 
 st.set_page_config(page_title="Self-Evaluating Lesson Generator", page_icon="🎓", layout="wide")
-settings = load_settings()
+try:
+    settings = load_settings()
+except ValueError as exc:
+    st.error(f"Invalid configuration: {exc}")
+    st.stop()
 
 # ---------------------------------------------------------------- sidebar
 with st.sidebar:
@@ -28,8 +32,18 @@ with st.sidebar:
         st.caption("Simulated demo: outputs are scripted, not produced by an LLM.")
     elif not settings.api_key:
         st.warning("ANTHROPIC_API_KEY is not set. Add it to .env or switch to mock mode.")
-    threshold = st.number_input("Learning threshold (failing runs)", 1, 10, settings.learning_threshold)
+    threshold = st.number_input(
+        "Learning threshold (failing runs)", min_value=1, max_value=10,
+        value=settings.learning_threshold, step=1,
+        help="How many separate failing runs are needed before guidance is learned.",
+    )
     st.caption(f"Memory file: `{settings.db_path(mode).name}`")
+
+try:
+    threshold = parse_learning_threshold(threshold, source="Learning threshold")
+except ValueError as exc:
+    st.error(f"Invalid learning threshold: {exc}")
+    st.stop()
 
 st.title("🎓 Self-Evaluating Lesson Content Generator")
 st.caption("INPUT → GENERATE → EVALUATE → REGENERATE → FINAL OUTPUT → MEMORY UPDATE")

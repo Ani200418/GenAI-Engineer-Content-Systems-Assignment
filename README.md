@@ -20,7 +20,7 @@ Demo topic: **Introduction to RAG (Retrieval-Augmented Generation)** for a Class
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env                                   # Windows: copy .env.example .env
+[ -f .env ] || cp .env.example .env                    # Windows: copy only if .env does not exist
 streamlit run app.py
 ```
 Opens at http://localhost:8501. Default provider is **mock** (no key needed).

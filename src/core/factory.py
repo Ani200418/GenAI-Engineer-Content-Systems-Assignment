@@ -36,7 +36,9 @@ def build_pipeline(mode: str = "mock", scenario: str = "retry", db_path: str | P
             evaluator_provider = create_provider(mode, api_key=settings.api_key, model=settings.evaluator_model)
     kb = load_knowledge_base(kb_path)
     memory = MemoryManager(Database(db_path or settings.db_path(mode)))
-    learning = LearningEngine(memory, learning_threshold or settings.learning_threshold)
+    learning = LearningEngine(
+        memory, learning_threshold if learning_threshold is not None else settings.learning_threshold
+    )
     orchestrator = LessonOrchestrator(
         LessonGenerator(provider, kb), LessonEvaluator(evaluator_provider, kb), kb, memory, learning,
         provider_name=provider.name, simulated=provider.is_simulated)
